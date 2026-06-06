@@ -2,6 +2,7 @@ from fastmcp import FastMCP
 import os
 import aiosqlite
 import tempfile
+import asyncio
 
 # Use temporary directory which should be writable
 TEMP_DIR = tempfile.gettempdir()
@@ -13,15 +14,13 @@ print(f"Database path: {DB_PATH}")
 mcp = FastMCP("ExpenseTracker")
 
 
-def init_db():
+async def init_db():
     """Initialize the database."""
     try:
-        import sqlite3
+        async with aiosqlite.connect(DB_PATH) as c:
+            await c.execute("PRAGMA journal_mode=WAL")
 
-        with sqlite3.connect(DB_PATH) as c:
-            c.execute("PRAGMA journal_mode=WAL")
-
-            c.execute("""
+            await c.execute("""
                 CREATE TABLE IF NOT EXISTS expenses(
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT NOT NULL,
@@ -33,11 +32,11 @@ def init_db():
             """)
 
             # Test write access
-            c.execute(
+            await c.execute(
                 "INSERT OR IGNORE INTO expenses(date, amount, category) VALUES ('2000-01-01', 0, 'test')"
             )
-            c.execute("DELETE FROM expenses WHERE category = 'test'")
-
+            await c.execute("DELETE FROM expenses WHERE category = 'test'")
+            await c.commit()
             print("Database initialized successfully with write access")
 
     except Exception as e:
@@ -46,7 +45,7 @@ def init_db():
 
 
 # Initialize database synchronously at module load
-init_db()
+asyncio.run(init_db())
 
 
 @mcp.tool()
