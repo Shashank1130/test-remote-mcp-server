@@ -45,7 +45,6 @@ async def init_db():
 
 
 # Initialize database synchronously at module load
-asyncio.run(init_db())
 
 
 @mcp.tool()
@@ -324,6 +323,9 @@ def categories():
 
 
 if __name__ == "__main__":
+    
+    asyncio.run(init_db())
+    
     mcp.run(
         transport="http",
         host="0.0.0.0",
