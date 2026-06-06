@@ -3,6 +3,7 @@ import os
 import aiosqlite
 import tempfile
 import asyncio
+from contextlib import asynccontextmanager
 
 # Use temporary directory which should be writable
 TEMP_DIR = tempfile.gettempdir()
@@ -10,9 +11,6 @@ DB_PATH = os.path.join(TEMP_DIR, "expenses.db")
 CATEGORIES_PATH = os.path.join(os.path.dirname(__file__), "categories.json")
 
 print(f"Database path: {DB_PATH}")
-
-mcp = FastMCP("ExpenseTracker")
-
 
 async def init_db():
     """Initialize the database."""
@@ -45,7 +43,12 @@ async def init_db():
 
 
 # Initialize database synchronously at module load
-
+@asynccontextmanager
+async def lifespan(app):
+    await init_db()  # ✅ runs on every startup
+    yield
+    
+mcp = FastMCP("ExpenseTracker", lifespan=lifespan)
 
 @mcp.tool()
 async def add_expense(
@@ -323,9 +326,7 @@ def categories():
 
 
 if __name__ == "__main__":
-    
-    asyncio.run(init_db())
-    
+        
     mcp.run(
         transport="http",
         host="0.0.0.0",
